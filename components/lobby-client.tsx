@@ -340,16 +340,15 @@ export function LobbyClient({
       <Navbar username={profile?.username} elo={profile?.elo_rating} />
 
       <div className="container mx-auto px-4 py-8">
-        {/* Player Stats Card */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground">Game Lobby</h1>
+          <p className="text-sm text-muted-foreground">
+            Join an open game or create your own
+          </p>
+        </div>
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Game Lobby</CardTitle>
-                <CardDescription>
-                  Join an open game or create your own
-                </CardDescription>
-              </div>
               <div className="flex items-center gap-4">
                 {userOpenGame ? (
                   <Button variant="destructive" onClick={handleCancelGame}>
