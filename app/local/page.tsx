@@ -1,10 +1,25 @@
 import { LocalGameClient } from "@/components/local-game-client";
 import { Navbar } from "@/components/ui/navbar";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
-export default function LocalPlayPage() {
+export default async function LocalPlayPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/auth/login");
+  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
   return (
     <div className="min-h-screen bg-background">
-      <Navbar username={undefined} elo={undefined} />
+      <Navbar username={profile?.username} elo={profile?.elo_rating} />
 
       <div className="container mx-auto px-4 py-8 space-y-6">
         <div>

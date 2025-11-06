@@ -11,18 +11,72 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Navbar } from "@/components/ui/navbar";
+import { createClient } from "@/lib/supabase/client";
 import { Search, UserPlus } from "lucide-react";
+import { useEffect, useState } from "react";
+
+interface Profile {
+  id: string;
+  username: string;
+  display_name: string | null;
+  elo_rating: number;
+  games_played: number;
+  games_won: number;
+  games_lost: number;
+  games_drawn: number;
+}
 
 export default function PlayersPage() {
-  // Mock data - in real app this would come from API
-  const currentUser = {
-    username: "levelynup",
-    handle: "@levelynup",
-    elo: 1184,
-    record: "0W - 1L - 0D",
-    winRate: "0%",
-    lastActive: "Online",
-  };
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      setLoading(true);
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      let { data } = await supabase
+        .from("profiles")
+        .select(
+          "id,username,display_name,elo_rating,games_played,games_won,games_lost,games_drawn"
+        )
+        .eq("id", user.id)
+        .single();
+
+      if (data) {
+        setProfile(data);
+      } else {
+        setProfile(null);
+      }
+      setLoading(false);
+    }
+
+    fetchProfile();
+  }, []);
+
+  // Compute user stats from profile
+  const currentUser = profile
+    ? {
+        username: profile.username,
+        handle: `@${profile.username}`,
+        elo: profile.elo_rating,
+        record: `${profile.games_won}W - ${profile.games_lost}L - ${profile.games_drawn}D`,
+        winRate:
+          profile.games_played > 0
+            ? `${Math.round((profile.games_won / profile.games_played) * 100)}%`
+            : "0%",
+        lastActive: "Online",
+      }
+    : null;
 
   const friends = [
     {
@@ -37,7 +91,14 @@ export default function PlayersPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar username="levelynup" elo={1184} />
+      <Navbar
+        username={profile?.username || ""}
+        elo={
+          typeof profile?.elo_rating === "number"
+            ? profile.elo_rating
+            : undefined
+        }
+      />
 
       <div className="container mx-auto px-4 py-8 space-y-6">
         <div>
@@ -53,44 +114,64 @@ export default function PlayersPage() {
             <CardTitle className="text-lg">Your Profile</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16 border-2 border-primary">
-                <AvatarFallback className="text-xl font-semibold bg-primary text-primary-foreground">
-                  {currentUser.username[0].toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-lg">
-                    {currentUser.username}
-                  </h3>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-500 border border-green-500/20">
-                    {currentUser.lastActive}
-                  </span>
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading profile...
+              </div>
+            ) : currentUser ? (
+              <>
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16 border-2 border-primary">
+                    <AvatarFallback className="text-xl font-semibold bg-primary text-primary-foreground">
+                      {currentUser.username[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-lg">
+                        {currentUser.username}
+                      </h3>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-500 border border-green-500/20">
+                        {currentUser.lastActive}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {currentUser.handle}
+                    </p>
+                  </div>
+                  <div className="text-right space-y-1">
+                    <div className="text-2xl font-bold">{currentUser.elo}</div>
+                    <div className="text-xs text-muted-foreground">
+                      ELO Rating
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {currentUser.handle}
-                </p>
+                <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground">Record</div>
+                    <div className="font-semibold">{currentUser.record}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground">
+                      Win Rate
+                    </div>
+                    <div className="font-semibold">{currentUser.winRate}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground">
+                      Last Active
+                    </div>
+                    <div className="font-semibold">
+                      {currentUser.lastActive}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Please log in to view your profile
               </div>
-              <div className="text-right space-y-1">
-                <div className="text-2xl font-bold">{currentUser.elo}</div>
-                <div className="text-xs text-muted-foreground">ELO Rating</div>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground">Record</div>
-                <div className="font-semibold">{currentUser.record}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground">Win Rate</div>
-                <div className="font-semibold">{currentUser.winRate}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground">Last Active</div>
-                <div className="font-semibold">{currentUser.lastActive}</div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
