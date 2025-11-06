@@ -1,4 +1,6 @@
 import { Badge } from "@/components/ui/badge";
+import { Award, Medal, Trophy } from "lucide-react";
+
 import {
   Card,
   CardContent,
@@ -8,6 +10,19 @@ import {
 } from "@/components/ui/card";
 import { Navbar } from "@/components/ui/navbar";
 import { createClient } from "@/lib/supabase/server";
+
+const getRankIcon = (rank: number) => {
+  switch (rank) {
+    case 1:
+      return <Trophy className="h-5 w-5 text-yellow-500" />;
+    case 2:
+      return <Medal className="h-5 w-5 text-gray-400" />;
+    case 3:
+      return <Award className="h-5 w-5 text-amber-600" />;
+    default:
+      return null;
+  }
+};
 
 export default async function LeaderboardPage() {
   const supabase = await createClient();
@@ -44,19 +59,21 @@ export default async function LeaderboardPage() {
                 leaderboard.map((player, index) => (
                   <div
                     key={player.username}
-                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent"
+                    className="flex items-center justify-between p-4 border border-border rounded-lg"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-8 text-center font-bold text-muted-foreground">
-                        #{index + 1}
+                        {/* TODO: MAKE LEADERBOARD DISPLAY DYNAMICALLY TO REAL USER DATA */}
+                        {getRankIcon(index + 1)}
                       </div>
                       <div>
                         <div className="font-medium text-foreground">
                           {player.display_name || player.username}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {player.games_played} games • {player.games_won}W{" "}
-                          {player.games_lost}L
+                          {player.games_played}{" "}
+                          {player.games_played === 1 ? "game" : "games"} •{" "}
+                          {player.games_won}W {player.games_lost}L
                         </div>
                       </div>
                     </div>
