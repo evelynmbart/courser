@@ -84,7 +84,6 @@ export function PlayerProfileClient({
 
       if (error) throw error;
 
-      alert("Message sent successfully!");
       setMessageContent("");
       setMessageDialogOpen(false);
     } catch (error) {

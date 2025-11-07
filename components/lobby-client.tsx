@@ -113,14 +113,18 @@ export function LobbyClient({
           schema: "public",
           table: "games",
         },
-        () => {
+        (payload) => {
+          console.log("[Lobby Realtime] Game change detected:", payload);
           fetchGames();
           checkUserOpenGame();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[Lobby Realtime] Subscription status:", status);
+      });
 
     return () => {
+      console.log("[Lobby Realtime] Unsubscribing");
       supabase.removeChannel(channel);
     };
   }, []);
@@ -200,7 +204,6 @@ export function LobbyClient({
       setPassword("");
       setColorPreference("random");
 
-      alert("Game created! Waiting for an opponent to join.");
       fetchGames();
       checkUserOpenGame();
     } catch (error) {

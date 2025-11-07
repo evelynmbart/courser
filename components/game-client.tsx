@@ -97,6 +97,7 @@ export function GameClient({
           filter: `id=eq.${gameId}`,
         },
         async (payload) => {
+          console.log("[Game Realtime] Game update detected:", payload);
           const { data, error } = await supabase
             .from("games")
             .select(
@@ -115,13 +116,18 @@ export function GameClient({
           }
 
           if (data) {
+            console.log("[Game Realtime] Game state updated");
             setGame(data as GameData);
+            setCurrentMoveIndex(data.move_history.length);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[Game Realtime] Subscription status:", status);
+      });
 
     return () => {
+      console.log("[Game Realtime] Unsubscribing");
       supabase.removeChannel(channel);
     };
   }, [initialGame.id, supabase]);
