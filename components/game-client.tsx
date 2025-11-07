@@ -118,6 +118,7 @@ export function GameClient({
           if (data) {
             console.log("[Game Realtime] Game state updated");
             setGame(data as GameData);
+            setCurrentMoveIndex(data.move_history.length);
           }
         }
       )
