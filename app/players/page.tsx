@@ -78,6 +78,36 @@ export default function PlayersPage() {
       }
     : null;
 
+  useEffect(() => {
+    async function fetchProfile() {
+      setLoading(true);
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (data) {
+        setProfile(data);
+      }
+      setLoading(false);
+    }
+
+    fetchProfile();
+  }, []);
+
+  // Mock data - in real app this would come from API
   const friends = [
     {
       username: "joebeez",
@@ -88,6 +118,14 @@ export default function PlayersPage() {
       lastActive: "2h ago",
     },
   ];
+
+  const winRate = profile?.games_played
+    ? Math.round(((profile.games_won || 0) / profile.games_played) * 100)
+    : 0;
+
+  const record = `${profile?.games_won || 0}W - ${
+    profile?.games_lost || 0
+  }L - ${profile?.games_drawn || 0}D`;
 
   return (
     <div className="min-h-screen bg-background">
