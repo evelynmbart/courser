@@ -204,7 +204,6 @@ export function LobbyClient({
       setPassword("");
       setColorPreference("random");
 
-      alert("Game created! Waiting for an opponent to join.");
       fetchGames();
       checkUserOpenGame();
     } catch (error) {
