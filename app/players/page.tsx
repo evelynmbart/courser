@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Navbar } from "@/components/ui/navbar";
 import { Textarea } from "@/components/ui/textarea";
+import { createClient } from "@/lib/supabase/client";
 import {
   Edit,
   FileText,
@@ -30,9 +31,14 @@ import {
   User,
   UserPlus,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 export default function PlayersPage() {
+  const router = useRouter();
+  const supabase = createClient();
+
   // Edit profile dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [showPasswordSection, setShowPasswordSection] = useState(false);
@@ -40,39 +46,132 @@ export default function PlayersPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Mock data - in real app this would come from API
-  const [currentUser, setCurrentUser] = useState({
-    username: "levelynup",
-    handle: "@levelynup",
-    elo: 1184,
-    wins: 0,
-    losses: 1,
-    draws: 0,
-    gamesPlayed: 1,
-    record: "0W - 1L - 0D",
-    winRate: "0%",
-    lastActive: "Online",
-    bio: "Chess enthusiast and strategy game lover.",
-    avatarUrl: null as string | null,
-  });
+  // Loading and error states
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // User data from Supabase
+  const [currentUser, setCurrentUser] = useState<{
+    id: string;
+    username: string;
+    handle: string;
+    elo: number;
+    wins: number;
+    losses: number;
+    draws: number;
+    gamesPlayed: number;
+    record: string;
+    winRate: string;
+    lastActive: string;
+    bio: string;
+    avatarUrl: string | null;
+  } | null>(null);
 
   // Form state
   const [editForm, setEditForm] = useState({
-    username: currentUser.username,
-    bio: currentUser.bio,
+    username: "",
+    bio: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
+  // Fetch user data from Supabase
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get current user
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (!user) {
+          router.push("/auth/login");
+          return;
+        }
+
+        // Get profile
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        if (!profile) throw new Error("Profile not found");
+
+        // Calculate win rate
+        const winRate =
+          profile.games_played > 0
+            ? Math.round((profile.games_won / profile.games_played) * 100)
+            : 0;
+
+        setCurrentUser({
+          id: profile.id,
+          username: profile.username,
+          handle: `@${profile.username}`,
+          elo: profile.elo_rating,
+          wins: profile.games_won,
+          losses: profile.games_lost,
+          draws: profile.games_drawn,
+          gamesPlayed: profile.games_played,
+          record: `${profile.games_won}W - ${profile.games_lost}L - ${profile.games_drawn}D`,
+          winRate: `${winRate}%`,
+          lastActive: "Online",
+          bio: profile.bio || "",
+          avatarUrl: profile.avatar_url,
+        });
+
+        setEditForm({
+          username: profile.username,
+          bio: profile.bio || "",
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } catch (err: any) {
+        console.error("Error loading profile:", err);
+        setError(err.message || "Failed to load profile");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadUserProfile();
+  }, [supabase, router]);
+
   const friends = [
     {
+      id: "friend-1-id", // In real app, this would be the actual user ID from the database
       username: "joebeez",
       handle: "@joebeez",
       elo: 1215,
-      record: "2W - 1L - 0D",
+      record: "10W - 3L - 2D",
       winRate: "67%",
       lastActive: "2h ago",
+    },
+    {
+      id: "friend-2-id",
+      username: "chessqueen99",
+      handle: "@chessqueen99",
+      elo: 1350,
+      record: "25W - 10L - 5D",
+      winRate: "63%",
+      lastActive: "Online",
+    },
+    {
+      id: "friend-3-id",
+      username: "knightrider",
+      handle: "@knightrider",
+      elo: 1180,
+      record: "12W - 15L - 3D",
+      winRate: "40%",
+      lastActive: "1d ago",
     },
   ];
 
@@ -89,6 +188,8 @@ export default function PlayersPage() {
   };
 
   const handleEditProfile = () => {
+    if (!currentUser) return;
+
     setEditForm({
       username: currentUser.username,
       bio: currentUser.bio,
@@ -101,7 +202,9 @@ export default function PlayersPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
+    if (!currentUser) return;
+
     // Validate password fields if user is changing password
     if (editForm.newPassword) {
       if (editForm.newPassword !== editForm.confirmPassword) {
@@ -114,24 +217,124 @@ export default function PlayersPage() {
       }
     }
 
-    // In real app, this would call API to update profile
-    setCurrentUser({
-      ...currentUser,
-      username: editForm.username,
-      handle: `@${editForm.username}`,
-      bio: editForm.bio,
-      avatarUrl: avatarPreview,
-    });
+    try {
+      setSaving(true);
+      setError(null);
 
-    // Reset form
-    setIsEditDialogOpen(false);
-    setAvatarFile(null);
-    alert("Profile updated successfully!");
+      let avatarUrl = currentUser.avatarUrl;
+
+      // Upload avatar if changed
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split(".").pop();
+        const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
+
+        // Delete old avatar if exists
+        if (currentUser.avatarUrl) {
+          const oldPath = currentUser.avatarUrl.split("/").pop();
+          if (oldPath) {
+            await supabase.storage
+              .from("avatars")
+              .remove([`avatars/${oldPath}`]);
+          }
+        }
+
+        // Upload new avatar
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(filePath, avatarFile, {
+            cacheControl: "3600",
+            upsert: true,
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+        avatarUrl = publicUrl;
+      }
+
+      // Update profile in database
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          username: editForm.username,
+          bio: editForm.bio,
+          avatar_url: avatarUrl,
+          last_active_at: new Date().toISOString(),
+        })
+        .eq("id", currentUser.id);
+
+      if (updateError) throw updateError;
+
+      // Update password if provided
+      if (editForm.newPassword && editForm.currentPassword) {
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: editForm.newPassword,
+        });
+
+        if (passwordError) throw passwordError;
+      }
+
+      // Update local state
+      setCurrentUser({
+        ...currentUser,
+        username: editForm.username,
+        handle: `@${editForm.username}`,
+        bio: editForm.bio,
+        avatarUrl: avatarUrl,
+      });
+
+      // Reset form
+      setIsEditDialogOpen(false);
+      setAvatarFile(null);
+      setShowPasswordSection(false);
+      alert("Profile updated successfully!");
+    } catch (err: any) {
+      console.error("Error saving profile:", err);
+      alert(err.message || "Failed to save profile. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar username="Loading..." elo={0} />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <div className="text-muted-foreground">Loading profile...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !currentUser) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar username="Error" elo={0} />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <div className="text-destructive mb-4">
+              {error || "Failed to load profile"}
+            </div>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar username="levelynup" elo={1184} />
+      <Navbar username={currentUser.username} elo={currentUser.elo} />
 
       <div className="container mx-auto px-4 py-8 space-y-6">
         <div>
@@ -248,35 +451,44 @@ export default function PlayersPage() {
 
             <div className="space-y-3">
               {friends.map((friend) => (
-                <div
-                  key={friend.username}
-                  className="flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                >
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className="font-semibold">
-                      {friend.username[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold truncate">
-                        {friend.username}
-                      </h4>
-                      <span className="text-xs text-muted-foreground">
-                        {friend.lastActive}
-                      </span>
+                <div key={friend.username} className="group relative">
+                  <Link href={`/players/${friend.id}`}>
+                    <div className="flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-muted/50 hover:border-primary/50 transition-colors cursor-pointer">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="font-semibold">
+                          {friend.username[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold truncate group-hover:text-primary transition-colors">
+                            {friend.username}
+                          </h4>
+                          <span className="text-xs text-muted-foreground">
+                            {friend.lastActive}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {friend.handle}
+                        </p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <div className="text-lg font-bold">{friend.elo}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {friend.winRate}
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {friend.handle}
-                    </p>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <div className="text-lg font-bold">{friend.elo}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {friend.winRate}
-                    </div>
-                  </div>
-                  <Button size="sm" variant="outline">
+                  </Link>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert(`Challenge ${friend.username} to a game!`);
+                    }}
+                  >
                     Challenge
                   </Button>
                 </div>
@@ -474,10 +686,13 @@ export default function PlayersPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(false)}
+                disabled={saving}
               >
                 Cancel
               </Button>
-              <Button onClick={handleSaveProfile}>Save Changes</Button>
+              <Button onClick={handleSaveProfile} disabled={saving}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -22,11 +22,14 @@ import { MessageSquare, Swords } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Navbar } from "./ui/navbar";
 
 interface Player {
   id: string;
   username: string;
   display_name: string | null;
+  bio: string | null;
+  avatar_url: string | null;
   elo_rating: number;
   games_played: number;
   games_won: number;
@@ -124,24 +127,7 @@ export function PlayerProfileClient({
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/lobby">
-              <h1 className="text-2xl font-bold text-foreground hover:text-primary cursor-pointer">
-                Courser
-              </h1>
-            </Link>
-            <Badge variant="secondary">Player Profile</Badge>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button asChild variant="outline">
-              <Link href="/players">All Players</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/lobby">Lobby</Link>
-            </Button>
-          </div>
-        </div>
+        <Navbar username={player.username} elo={player.elo_rating} />
       </header>
 
       <div className="container mx-auto px-4 py-8">
@@ -149,10 +135,18 @@ export function PlayerProfileClient({
           {/* Player Info */}
           <Card className="md:col-span-1">
             <CardHeader>
-              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <span className="text-4xl font-bold text-primary">
-                  {player.username.charAt(0).toUpperCase()}
-                </span>
+              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                {player.avatar_url ? (
+                  <img
+                    src={player.avatar_url}
+                    alt={player.username}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-4xl font-bold text-primary">
+                    {player.username.charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
               <CardTitle className="text-center">
                 {player.display_name || player.username}
@@ -160,6 +154,11 @@ export function PlayerProfileClient({
               <CardDescription className="text-center">
                 @{player.username}
               </CardDescription>
+              {player.bio && (
+                <p className="text-sm text-center text-muted-foreground mt-3 px-2">
+                  {player.bio}
+                </p>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center">
