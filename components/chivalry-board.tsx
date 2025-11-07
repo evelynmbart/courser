@@ -256,56 +256,115 @@ export function ChivalryBoard({
     }
   };
 
-  return (
-    <div className="inline-block">
-      {displayRows.map((row) => (
-        <div key={row.rank} className="flex justify-center">
-          {row.squares.map((square) => {
-            const piece = boardState[square];
-            const isSelected = selectedSquare === square;
-            const isLegalMove = legalMoves.includes(square);
-            const isCastle = isCastleSquare(square);
-            const isLight =
-              (square.charCodeAt(0) + Number.parseInt(square.slice(1))) % 2 ===
-              0;
+  // All files in order (A-N)
+  const allFiles = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+  ];
 
-            return (
-              <button
-                key={square}
-                onClick={() => !disabled && onSquareClick(square)}
-                disabled={disabled}
-                className={cn(
-                  "w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-2xl sm:text-3xl font-bold border border-border transition-colors relative",
-                  isLight ? "bg-muted" : "bg-card",
-                  isCastle && "ring-2 ring-primary ring-inset",
-                  isSelected && "bg-primary/20 ring-2 ring-primary",
-                  isLegalMove && "bg-accent cursor-pointer hover:bg-accent/80",
-                  !isLegalMove &&
-                    !disabled &&
-                    piece?.color === playerColor &&
-                    "cursor-pointer hover:bg-accent/50",
-                  disabled && "cursor-not-allowed opacity-60"
-                )}
-              >
-                {piece && (
-                  <span
-                    className={
-                      piece.color === "white"
-                        ? "text-foreground"
-                        : "text-foreground"
-                    }
-                  >
-                    {getPieceSymbol(piece)}
-                  </span>
-                )}
-                {isLegalMove && !piece && (
-                  <div className="w-3 h-3 rounded-full bg-primary/50" />
-                )}
-              </button>
-            );
-          })}
+  // All ranks in order (1-16)
+  const allRanks = [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+
+  // For black player, reverse the display
+  const displayFiles =
+    playerColor === "black" ? [...allFiles].reverse() : allFiles;
+  const displayRanks =
+    playerColor === "black" ? [...allRanks].reverse() : allRanks;
+
+  return (
+    <div className="flex items-start">
+      {/* Left rank labels - straight vertical line */}
+      <div className="flex flex-col">
+        {displayRanks.map((rank) => (
+          <div
+            key={`rank-${rank}`}
+            className="w-8 sm:w-10 h-10 sm:h-12 flex items-center justify-end pr-2"
+          >
+            <span className="text-xs sm:text-sm text-muted-foreground font-medium">
+              {rank}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Board area */}
+      <div className="inline-block">
+        {/* Board rows */}
+        {displayRows.map((row) => (
+          <div key={row.rank} className="flex justify-center">
+            {row.squares.map((square) => {
+              const piece = boardState[square];
+              const isSelected = selectedSquare === square;
+              const isLegalMove = legalMoves.includes(square);
+              const isCastle = isCastleSquare(square);
+              const isLight =
+                (square.charCodeAt(0) + Number.parseInt(square.slice(1))) %
+                  2 ===
+                0;
+
+              return (
+                <button
+                  key={square}
+                  onClick={() => !disabled && onSquareClick(square)}
+                  disabled={disabled}
+                  className={cn(
+                    "w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-2xl sm:text-3xl font-bold border border-border transition-colors relative",
+                    isLight ? "bg-muted" : "bg-card",
+                    isCastle && "ring-2 ring-primary ring-inset",
+                    isSelected && "bg-primary/20 ring-2 ring-primary",
+                    isLegalMove &&
+                      "bg-accent cursor-pointer hover:bg-accent/80",
+                    !isLegalMove &&
+                      !disabled &&
+                      piece?.color === playerColor &&
+                      "cursor-pointer hover:bg-accent/50",
+                    disabled && "cursor-not-allowed opacity-60"
+                  )}
+                >
+                  {piece && (
+                    <span
+                      className={
+                        piece.color === "white"
+                          ? "text-foreground"
+                          : "text-foreground"
+                      }
+                    >
+                      {getPieceSymbol(piece)}
+                    </span>
+                  )}
+                  {isLegalMove && !piece && (
+                    <div className="w-3 h-3 rounded-full bg-primary/50" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+
+        {/* Bottom file labels - straight horizontal line */}
+        <div className="flex mt-1">
+          {displayFiles.map((file) => (
+            <div
+              key={`file-${file}`}
+              className="w-10 h-5 sm:w-12 sm:h-6 flex items-center justify-center text-xs sm:text-sm text-muted-foreground font-medium"
+            >
+              {file}
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
