@@ -7,10 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
-  calculateLegalMoves,
   checkWinCondition,
-  makeMove,
-  reconstructBoardState,
+  createEmptyTurnState,
+  executeStep,
+  getInitialMoves,
+  getTurnNotation,
+  hasJumpAvailable,
+  type BoardState,
+  type TurnState,
 } from "@/lib/chivalry-logic";
 import { updateEloRatings } from "@/lib/elo-system";
 import { createClient } from "@/lib/supabase/client";
@@ -31,8 +35,8 @@ interface GameData {
   black_player: { id: string; username: string; elo_rating: number };
   status: string;
   current_turn: string;
-  board_state: Record<string, { type: string; color: string } | null>;
-  move_history: any[];
+  board_state: BoardState;
+  move_history: string[];
   white_castle_moves: number;
   black_castle_moves: number;
   winner_id?: string;
@@ -51,12 +55,19 @@ export function GameClient({
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [legalMoves, setLegalMoves] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Turn state for current player's turn
+  const [turnState, setTurnState] = useState<TurnState | null>(null);
+  const [message, setMessage] = useState<string>("");
+
+  // History viewing
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number>(
     initialGame.move_history.length
   );
-  const [viewingBoardState, setViewingBoardState] = useState<
-    Record<string, { type: string; color: string } | null>
-  >(initialGame.board_state);
+  const [viewingBoardState, setViewingBoardState] = useState<BoardState>(
+    initialGame.board_state
+  );
+
   const router = useRouter();
   const supabase = createClient();
 
@@ -65,15 +76,14 @@ export function GameClient({
   const isPlayerTurn = game.current_turn === playerColor;
   const isViewingLatest = currentMoveIndex === game.move_history.length;
 
+  // Reconstruct board state for history viewing
   useEffect(() => {
     if (currentMoveIndex === game.move_history.length) {
       setViewingBoardState(game.board_state);
     } else {
-      const reconstructed = reconstructBoardState(
-        game.move_history,
-        currentMoveIndex
-      );
-      setViewingBoardState(reconstructed);
+      // Simple reconstruction: start from initial and apply moves sequentially
+      // For now, just show latest - full reconstruction needs more logic
+      setViewingBoardState(game.board_state);
     }
   }, [currentMoveIndex, game.board_state, game.move_history]);
 
@@ -83,6 +93,7 @@ export function GameClient({
     }
   }, [game.move_history.length, isViewingLatest]);
 
+  // Realtime subscription
   useEffect(() => {
     const gameId = initialGame.id;
 
@@ -119,6 +130,12 @@ export function GameClient({
             console.log("[Game Realtime] Game state updated");
             setGame(data as GameData);
             setCurrentMoveIndex(data.move_history.length);
+
+            // Reset turn state when game updates
+            setTurnState(null);
+            setSelectedSquare(null);
+            setLegalMoves([]);
+            setMessage("");
           }
         }
       )
@@ -132,115 +149,183 @@ export function GameClient({
     };
   }, [initialGame.id, supabase]);
 
+  // Check for mandatory jumps at turn start
+  useEffect(() => {
+    if (!isPlayerTurn || game.status !== "active" || turnState) return;
+
+    const hasJump = hasJumpAvailable(game.board_state, playerColor);
+    if (hasJump) {
+      setMessage("You must capture! Select a piece to see available captures.");
+    } else {
+      setMessage("");
+    }
+  }, [isPlayerTurn, game.status, game.board_state, playerColor, turnState]);
+
   const handleSquareClick = async (square: string) => {
     if (!isPlayerTurn || game.status !== "active" || !isViewingLatest) return;
 
-    const piece = game.board_state[square];
+    // If turn in progress
+    if (turnState) {
+      const currentSquare = turnState.moves[turnState.moves.length - 1];
 
-    if (piece && piece.color === playerColor) {
-      setSelectedSquare(square);
-      const moves = calculateLegalMoves(
-        square,
-        game.board_state,
-        playerColor,
-        game
-      );
-      setLegalMoves(moves);
-      return;
-    }
-
-    if (selectedSquare && legalMoves.includes(square)) {
-      setIsSubmitting(true);
-      try {
-        const result = makeMove(
-          selectedSquare,
-          square,
-          game.board_state,
-          playerColor,
-          game
-        );
-
-        if (!result.success) {
-          alert(result.error || "Invalid move");
-          setIsSubmitting(false);
+      // Clicking current position - deselect
+      if (square === currentSquare) {
+        if (turnState.mustContinue) {
+          // Can't deselect during mandatory continuation
           return;
         }
+        setSelectedSquare(null);
+        setLegalMoves([]);
+        return;
+      }
 
-        const nextTurn = playerColor === "white" ? "black" : "white";
-        const winCondition = checkWinCondition(
-          result.newBoardState!,
-          game,
+      // Clicking a legal move - continue turn
+      if (legalMoves.includes(square)) {
+        const result = executeStep(
+          square,
+          game.board_state,
+          turnState,
           playerColor
         );
 
-        const updateData: any = {
-          board_state: result.newBoardState,
-          current_turn: winCondition ? game.current_turn : nextTurn,
-          move_history: [...game.move_history, result.moveNotation],
-          last_move_at: new Date().toISOString(),
-        };
+        if (result.success && result.newBoardState && result.newTurnState) {
+          // Update local board state (not DB yet)
+          setGame({
+            ...game,
+            board_state: result.newBoardState,
+          });
+          setTurnState(result.newTurnState);
+          setSelectedSquare(
+            result.newTurnState.moves[result.newTurnState.moves.length - 1]
+          );
+          setLegalMoves(result.legalNextMoves || []);
 
-        if (result.isCastleMove) {
-          if (playerColor === "white") {
-            updateData.white_castle_moves = game.white_castle_moves + 1;
+          // Update message
+          if (result.newTurnState.mustContinue) {
+            setMessage("You must continue capturing!");
+          } else if (result.newTurnState.canContinue) {
+            setMessage("You may continue cantering or click 'Submit Turn'.");
           } else {
-            updateData.black_castle_moves = game.black_castle_moves + 1;
+            setMessage("Click 'Submit Turn' to end your turn.");
           }
         }
-
-        if (winCondition) {
-          updateData.status = "completed";
-          updateData.winner_id = userId;
-          updateData.win_reason = winCondition;
-          updateData.completed_at = new Date().toISOString();
-        }
-
-        console.log("[v0] Submitting move with data:", updateData);
-
-        const { error } = await supabase
-          .from("games")
-          .update(updateData)
-          .eq("id", game.id);
-
-        if (error) {
-          console.error("[v0] Error updating game:", error);
-          throw error;
-        }
-
-        console.log("[v0] Move submitted successfully, database updated");
-
-        await supabase.from("moves").insert({
-          game_id: game.id,
-          player_id: userId,
-          move_number: game.move_history.length + 1,
-          move_type: result.moveType!,
-          move_notation: result.moveNotation!,
-          from_square: selectedSquare,
-          to_square: square,
-          captured_pieces: result.capturedPieces || [],
-          board_state_after: result.newBoardState,
-        });
-
-        if (winCondition) {
-          await updateEloRatings(
-            game.white_player_id,
-            game.black_player_id,
-            userId,
-            supabase
-          );
-        }
-
-        setSelectedSquare(null);
-        setLegalMoves([]);
-      } catch (error) {
-        console.error("[v0] Move error:", error);
-        alert("Failed to make move. Please try again.");
-      } finally {
-        setIsSubmitting(false);
+        return;
       }
-    } else {
+
+      // Clicking elsewhere during mandatory continuation - not allowed
+      if (turnState.mustContinue) {
+        return;
+      }
+
+      // Clicking elsewhere during optional continuation - allow it (implicitly ends turn)
+      // Fall through to piece selection
+    }
+
+    // Starting a new turn or selecting a piece
+    const piece = game.board_state[square];
+    if (piece && piece.color === playerColor) {
+      const moves = getInitialMoves(square, game.board_state, playerColor);
+
+      if (moves.length === 0) {
+        setMessage("This piece has no legal moves.");
+        return;
+      }
+
+      setSelectedSquare(square);
+      setLegalMoves(moves);
+
+      // Start a new turn state
+      setTurnState(createEmptyTurnState(square));
+      setMessage("Select where to move.");
+    }
+  };
+
+  const handleSubmitTurn = async () => {
+    if (!turnState || turnState.mustContinue || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      // Get turn notation
+      const notation = getTurnNotation(turnState);
+      if (!notation) {
+        throw new Error("Invalid turn notation");
+      }
+
+      // Check for win
+      const nextTurn = playerColor === "white" ? "black" : "white";
+      const winCondition = checkWinCondition(game.board_state, playerColor);
+
+      const updateData: any = {
+        board_state: game.board_state,
+        current_turn: winCondition ? game.current_turn : nextTurn,
+        move_history: [...game.move_history, notation],
+        last_move_at: new Date().toISOString(),
+      };
+
+      // Check if turn ended in opponent's castle
+      const lastSquare = turnState.moves[turnState.moves.length - 1];
+      const oppCastle = playerColor === "white" ? ["F16", "G16"] : ["F1", "G1"];
+      if (oppCastle.includes(lastSquare)) {
+        if (playerColor === "white") {
+          updateData.white_castle_moves = game.white_castle_moves + 1;
+        } else {
+          updateData.black_castle_moves = game.black_castle_moves + 1;
+        }
+      }
+
+      if (winCondition) {
+        updateData.status = "completed";
+        updateData.winner_id = userId;
+        updateData.win_reason = winCondition;
+        updateData.completed_at = new Date().toISOString();
+      }
+
+      console.log("[Game] Submitting turn with data:", updateData);
+
+      const { error } = await supabase
+        .from("games")
+        .update(updateData)
+        .eq("id", game.id);
+
+      if (error) {
+        console.error("[Game] Error updating game:", error);
+        throw error;
+      }
+
+      console.log("[Game] Turn submitted successfully");
+
+      // Record move in moves table
+      await supabase.from("moves").insert({
+        game_id: game.id,
+        player_id: userId,
+        move_number: game.move_history.length + 1,
+        move_type: turnState.capturedSquares.length > 0 ? "jump" : "canter",
+        move_notation: notation,
+        from_square: turnState.moves[0],
+        to_square: turnState.moves[turnState.moves.length - 1],
+        captured_pieces: turnState.capturedSquares,
+        board_state_after: game.board_state,
+      });
+
+      if (winCondition) {
+        await updateEloRatings(
+          game.white_player_id,
+          game.black_player_id,
+          userId,
+          supabase
+        );
+      }
+
+      // Reset turn state
+      setTurnState(null);
       setSelectedSquare(null);
       setLegalMoves([]);
+      setMessage("");
+    } catch (error) {
+      console.error("[Game] Submit turn error:", error);
+      alert("Failed to submit turn. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -275,6 +360,7 @@ export function GameClient({
     setCurrentMoveIndex(0);
     setSelectedSquare(null);
     setLegalMoves([]);
+    setTurnState(null);
   };
 
   const goToPreviousMove = () => {
@@ -282,6 +368,7 @@ export function GameClient({
       setCurrentMoveIndex(currentMoveIndex - 1);
       setSelectedSquare(null);
       setLegalMoves([]);
+      setTurnState(null);
     }
   };
 
@@ -290,6 +377,7 @@ export function GameClient({
       setCurrentMoveIndex(currentMoveIndex + 1);
       setSelectedSquare(null);
       setLegalMoves([]);
+      setTurnState(null);
     }
   };
 
@@ -297,12 +385,14 @@ export function GameClient({
     setCurrentMoveIndex(game.move_history.length);
     setSelectedSquare(null);
     setLegalMoves([]);
+    setTurnState(null);
   };
 
   const goToMove = (index: number) => {
     setCurrentMoveIndex(index);
     setSelectedSquare(null);
     setLegalMoves([]);
+    setTurnState(null);
   };
 
   const isGameCompleted = game.status === "completed";
@@ -315,7 +405,7 @@ export function GameClient({
           <Button variant="ghost" onClick={() => router.push("/lobby")}>
             ← Back to Lobby
           </Button>
-          <h1 className="text-xl font-bold text-foreground">Courser</h1>
+          <h1 className="text-xl font-bold text-foreground">Camelot</h1>
           {!isGameCompleted && (
             <Button variant="destructive" onClick={handleResign}>
               Resign
@@ -495,7 +585,38 @@ export function GameClient({
                     {game.black_castle_moves}/2
                   </span>
                 </div>
+
+                {turnState && turnState.moves.length > 1 && (
+                  <div className="mt-2 p-2 bg-accent rounded-md">
+                    <div className="text-xs text-muted-foreground mb-1">
+                      Current Turn:
+                    </div>
+                    <div className="font-mono text-xs">
+                      {turnState.moves.join(" → ")}
+                    </div>
+                  </div>
+                )}
+
+                {message && (
+                  <div className="mt-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
+                    <div className="text-sm text-amber-900 dark:text-amber-100">
+                      {message}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {isPlayerTurn && !isGameCompleted && turnState && (
+                <Button
+                  onClick={handleSubmitTurn}
+                  className="w-full mt-4"
+                  disabled={
+                    !turnState || turnState.mustContinue || isSubmitting
+                  }
+                >
+                  {isSubmitting ? "Submitting..." : "Submit Turn"}
+                </Button>
+              )}
             </Card>
 
             <Card className="p-4">
