@@ -2,9 +2,10 @@
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 interface NavbarProps {
   username?: string;
@@ -13,7 +14,8 @@ interface NavbarProps {
 
 export function Navbar({ username, elo }: NavbarProps) {
   const pathname = usePathname();
-
+  const supabase = createClient();
+  const router = useRouter();
   const navItems = [
     { href: "/lobby", label: "Lobby" },
     { href: "/local", label: "Local Play" },
@@ -21,6 +23,11 @@ export function Navbar({ username, elo }: NavbarProps) {
     { href: "/leaderboard", label: "Leaderboard" },
     { href: "/history", label: "Match History" },
   ];
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/auth/login");
+  };
 
   return (
     <nav className="border-b border-border bg-card">
@@ -60,7 +67,7 @@ export function Navbar({ username, elo }: NavbarProps) {
               </div>
             )}
             <ThemeToggle />
-            <Button variant="default" size="sm">
+            <Button variant="default" size="sm" onClick={() => signOut()}>
               Sign Out
             </Button>
           </div>
