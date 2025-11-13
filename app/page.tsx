@@ -24,10 +24,10 @@ export default async function HomePage() {
   return (
     <>
       <main className="bg-background h-screen flex items-center justify-space-between flex-col">
-        <div className="flex items-center justify-end w-full h-12 p-2 ">
+        <div className="fixed top-0 right-0 flex items-center h-12 pr-3">
           <ThemeToggle />
         </div>
-        <div className="flex items-center justify-center gap-6 text-lg">
+        <div className="flex items-center justify-center gap-6 pt-4 text-lg">
           <span>
             <span className="font-bold text-primary text-2xl">
               {gamesCount ?? 0}
