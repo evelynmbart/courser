@@ -111,14 +111,14 @@ export default function PlayersPage() {
         }
       />
 
-      <div className="container mx-auto px-4 py-8 space-y-6">
+      <main className="container mx-auto px-4 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Players</h1>
           <p className="text-sm text-muted-foreground">
             Your profile and friends
           </p>
         </div>
-        <header className="bg-background h-[250px] w-full rounded-lg flex items-start p-4 gap-4 m-auto">
+        <header className="bg-background h-[150px] w-full rounded-lg flex items-start p-4 gap-4 m-auto">
           <div className="w-1/6 size-full">
             <Avatar className="size-full mr-4 rounded-lg">
               <AvatarFallback>
@@ -153,7 +153,14 @@ export default function PlayersPage() {
           </div>
         </header>
         <Separator className="mt-1" />
-      </div>
+        <div className="flex gap-16 ml-4">
+          <a className="hover:text-yellow-500 cursor-pointer">Overview</a>
+          <a className="hover:text-yellow-500 cursor-pointer">Games</a>
+          <a className="hover:text-yellow-500 cursor-pointer">Stats</a>
+          <a className="hover:text-yellow-500 cursor-pointer">Friends</a>
+          <a className="hover:text-yellow-500 cursor-pointer">Awards</a>
+        </div>
+      </main>
     </div>
   );
 }
