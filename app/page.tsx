@@ -1,5 +1,11 @@
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { ChevronDown } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -23,7 +29,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <main className="bg-background h-screen flex items-center justify-space-between flex-col">
+      <section className="bg-background h-screen flex items-center justify-space-between flex-col">
         <div className="fixed top-0 right-0 flex items-center h-12 pr-3">
           <ThemeToggle />
         </div>
@@ -62,7 +68,65 @@ export default async function HomePage() {
           <button>Learn more</button>
           <ChevronDown />
         </div>
-      </main>
+      </section>
+      <section className="flex flex-col items-center justify-center gap-10">
+        <Card className="w-3/4 md:w-2/3">
+          <CardHeader>
+            <CardTitle>
+              <img
+                src="/camelotcrown.png"
+                alt="Crowned knight piece surrounded by two pawn pieces"
+                className="w-[250px] h-[250px] object-cover lg:w-[450px] lg:h-[450px] mx-auto"
+              />
+            </CardTitle>
+            <CardDescription className="text-center text-lg">
+              Learn Camelot
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="w-3/4 md:w-2/3">
+          <CardHeader>
+            <CardTitle>
+              <img
+                src="/camelotcrown.png"
+                alt="Crowned knight piece surrounded by two pawn pieces"
+                className="w-[250px] h-[250px] object-cover lg:w-[450px] lg:h-[450px] mx-auto"
+              />
+            </CardTitle>
+            <CardDescription className="text-center text-lg">
+              Learn Camelot
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="w-3/4 md:w-2/3">
+          <CardHeader>
+            <CardTitle>
+              <img
+                src="/camelotcrown.png"
+                alt="Crowned knight piece surrounded by two pawn pieces"
+                className="w-[250px] h-[250px] object-cover lg:w-[450px] lg:h-[450px] mx-auto"
+              />
+            </CardTitle>
+            <CardDescription className="text-center text-lg">
+              Learn Camelot
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="w-3/4 md:w-2/3">
+          <CardHeader>
+            <CardTitle>
+              <img
+                src="/camelotcrown.png"
+                alt="Crowned knight piece surrounded by two pawn pieces"
+                className="w-[250px] h-[250px] object-cover lg:w-[450px] lg:h-[450px] mx-auto"
+              />
+            </CardTitle>
+            <CardDescription className="text-center text-lg">
+              Learn Camelot
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </section>
     </>
   );
 }
