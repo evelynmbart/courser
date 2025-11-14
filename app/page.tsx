@@ -66,9 +66,12 @@ export default async function HomePage() {
             <h1 className="text-center p-4 text-4xl font-bold text-primary">
               Learn Camelot <br /> Earn your Crown <br /> Have fun!
             </h1>
-            <Button className="w-full text-lg font-bold py-6" variant="default">
-              {/*THIS DOESN'T WORK YET */}
-              Get Started
+            <Button
+              className="text-lg font-bold py-6 w-full"
+              variant="default"
+              asChild
+            >
+              <a href="/auth/login">Get Started</a>
             </Button>
           </div>
         </section>
@@ -160,9 +163,12 @@ export default async function HomePage() {
           <h1 className="text-4xl font-bold text-primary text-center">
             Learn, Play, and Have fun!
           </h1>
-          <Button className="text-lg font-bold py-6 w-3/4" variant="default">
-            {/*THIS DOESN'T WORK YET */}
-            Get Started
+          <Button
+            className="text-lg font-bold py-6 w-3/4"
+            variant="default"
+            asChild
+          >
+            <a href="/auth/login">Get Started</a>
           </Button>
         </section>
         <section className="text-muted-foreground flex flex-col gap-2">
