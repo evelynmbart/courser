@@ -79,7 +79,7 @@ export default async function HomePage() {
         </div>
       </header>
       <main className="flex flex-col items-center justify-center gap-10">
-        <Card className="w-3/4 md:w-1/2 ">
+        <Card className="w-3/4 md:w-1/2">
           <CardHeader>
             <CardTitle>
               <img
@@ -89,7 +89,7 @@ export default async function HomePage() {
               />
             </CardTitle>
             <CardDescription className="text-center text-lg">
-              Learn Camelot
+              Play vs <b>AI</b> from total beginner to total master
             </CardDescription>
           </CardHeader>
         </Card>
@@ -103,7 +103,7 @@ export default async function HomePage() {
               />
             </CardTitle>
             <CardDescription className="text-center text-lg">
-              Learn Camelot
+              <b>Play online</b> with new friends around the world
             </CardDescription>
           </CardHeader>
         </Card>
@@ -117,7 +117,8 @@ export default async function HomePage() {
               />
             </CardTitle>
             <CardDescription className="text-center text-lg">
-              Learn Camelot
+              Use <b>Local Play</b> to challenge your friends and family in
+              person
             </CardDescription>
           </CardHeader>
         </Card>
@@ -131,7 +132,7 @@ export default async function HomePage() {
               />
             </CardTitle>
             <CardDescription className="text-center text-lg">
-              Learn Camelot
+              Train and master all <b>speeds</b> and <b>strategies</b>
             </CardDescription>
           </CardHeader>
         </Card>
