@@ -232,8 +232,6 @@ export class Logic {
         boardState: newBoardState,
         playerColor,
       });
-      const totalCapturedSquares =
-        turnState.capturedSquares.length + (jumpCheck.valid ? 1 : 0);
       const wouldBeCharge = totalCapturedSquares < turnState.moves.length;
       // We can only continue jumping in a charge if we are a knight
       if (nextJump.valid && (!wouldBeCharge || isKnight)) {
@@ -262,7 +260,7 @@ export class Logic {
       legalNextMoves = legalNextMoves.filter((move) => move.type === "jump");
 
       // If we are a knight and we have only cantered this turn, include all charges as legal moves
-      if (isKnight && turnState.capturedSquares.length === 0) {
+      if (isKnight && totalCapturedSquares === 0) {
         legalNextMoves.push(
           ...Logic.getPossibleCharges({
             square: to,
