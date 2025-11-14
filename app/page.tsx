@@ -36,7 +36,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <header className="bg-background h-screen flex items-center justify-space-between flex-col">
+      <header className="bg-background h-screen flex items-center justify-space-between flex-col px-10">
         <div className="fixed top-0 right-0 flex items-center h-12 pr-3">
           <ThemeToggle />
         </div>
@@ -74,17 +74,18 @@ export default async function HomePage() {
         </section>
         <div className="flex items-center justify-center flex-col font-bold mb-4 text-primary">
           <button>Learn more</button>
+          {/*THIS DOESN'T WORK YET */}
           <ChevronDown />
         </div>
       </header>
       <main className="flex flex-col items-center justify-center gap-10">
-        <Card className="w-3/4 md:w-1/2">
+        <Card className="w-3/4 md:w-1/2 ">
           <CardHeader>
             <CardTitle>
               <img
                 src="/camelotcrown.png"
                 alt="Crowned knight piece surrounded by two pawn pieces"
-                className="w-[250px] h-[250px] object-cover lg:w-[350px] lg:h-[350px] mx-auto"
+                className="w-[200px] h-[200px] object-cover lg:w-[350px] lg:h-[350px] mx-auto"
               />
             </CardTitle>
             <CardDescription className="text-center text-lg">
@@ -98,7 +99,7 @@ export default async function HomePage() {
               <img
                 src="/camelotcrown.png"
                 alt="Crowned knight piece surrounded by two pawn pieces"
-                className="w-[250px] h-[250px] object-cover lg:w-[350px] lg:h-[350px] mx-auto"
+                className="w-[200px] h-[200px] object-cover lg:w-[350px] lg:h-[350px] mx-auto"
               />
             </CardTitle>
             <CardDescription className="text-center text-lg">
@@ -112,7 +113,7 @@ export default async function HomePage() {
               <img
                 src="/camelotcrown.png"
                 alt="Crowned knight piece surrounded by two pawn pieces"
-                className="w-[250px] h-[250px] object-cover lg:w-[350px] lg:h-[350px] mx-auto"
+                className="w-[200px] h-[200px] object-cover lg:w-[350px] lg:h-[350px] mx-auto"
               />
             </CardTitle>
             <CardDescription className="text-center text-lg">
@@ -126,7 +127,7 @@ export default async function HomePage() {
               <img
                 src="/camelotcrown.png"
                 alt="Crowned knight piece surrounded by two pawn pieces"
-                className="w-[250px] h-[250px] object-cover lg:w-[350px] lg:h-[350px] mx-auto"
+                className="w-[200px] h-[200px] object-cover lg:w-[350px] lg:h-[350px] mx-auto"
               />
             </CardTitle>
             <CardDescription className="text-center text-lg">
@@ -135,7 +136,7 @@ export default async function HomePage() {
           </CardHeader>
         </Card>
       </main>
-      <footer className="flex flex-col items-center justify-center gap-10 w-full mt-15">
+      <footer className="flex flex-col items-center justify-center gap-10 w-full mt-15 px-10">
         {/*NOTHING IN FOOTER IS LINKED YET*/}
         <section className="mb-6">
           <h4 className="text-center text-lg">
@@ -155,7 +156,7 @@ export default async function HomePage() {
           </h4>
         </section>
         <section className="flex flex-col items-center justify-center gap-6 w-full max-w-[500px] mb-6">
-          <h1 className="text-4xl font-bold text-primary">
+          <h1 className="text-4xl font-bold text-primary text-center">
             Learn, Play, and Have fun!
           </h1>
           <Button className="text-lg font-bold py-6 w-3/4" variant="default">
@@ -181,8 +182,8 @@ export default async function HomePage() {
               <li className="hover:text-yellow-500">CamelotCrown.com © 2025</li>
             </ul>
           </div>
-
-          <div className="flex items-center justify-center gap-2 mb-2">
+          <hr />
+          <div className="flex items-center justify-center gap-2 my-2">
             <Instagram className="hover:text-pink-500 cursor-pointer" />
             <Facebook className="hover:text-blue-600 cursor-pointer" />
             <Youtube className="hover:text-red-600 cursor-pointer" />
