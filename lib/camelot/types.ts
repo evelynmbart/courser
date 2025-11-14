@@ -10,6 +10,12 @@ export type TurnState = {
   moves: string[]; // Squares visited this turn [start, intermediate..., current]
   capturedSquares: string[]; // Squares where pieces were captured
   mustContinue: boolean;
+  mustCharge: boolean;
+};
+
+export type LegalMove = {
+  type: "plain" | "jump" | "canter";
+  to: string;
 };
 
 export type StepResult =
@@ -17,7 +23,7 @@ export type StepResult =
       success: true;
       newBoardState: BoardState;
       newTurnState: TurnState;
-      legalNextMoves: string[]; // Legal moves from current position
+      legalNextMoves: LegalMove[];
       message: string;
     }
   | {

@@ -7,7 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Camelot } from "@/lib/camelot";
-import { type BoardState, type TurnState } from "@/lib/camelot/types";
+import {
+  LegalMove,
+  type BoardState,
+  type TurnState,
+} from "@/lib/camelot/types";
 import { updateEloRatings } from "@/lib/elo-system";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -45,7 +49,7 @@ export function GameClient({
 }) {
   const [game, setGame] = useState<GameData>(initialGame);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-  const [legalMoves, setLegalMoves] = useState<string[]>([]);
+  const [legalMoves, setLegalMoves] = useState<LegalMove[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Turn state for current player's turn
@@ -174,12 +178,13 @@ export function GameClient({
       }
 
       // Clicking a legal move - continue turn
-      if (legalMoves.includes(square)) {
+      if (legalMoves.some((move) => move.to === square)) {
         const result = Camelot.Logic.executeStep(
           square,
           game.board_state,
           turnState,
-          playerColor
+          playerColor,
+          legalMoves
         );
 
         if (result.success && result.newBoardState && result.newTurnState) {

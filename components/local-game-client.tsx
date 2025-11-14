@@ -1,7 +1,7 @@
 "use client";
 
 import { Camelot } from "@/lib/camelot";
-import { BoardState, TurnState } from "@/lib/camelot/types";
+import { BoardState, LegalMove, TurnState } from "@/lib/camelot/types";
 import { useEffect, useState } from "react";
 import { ChivalryBoard } from "./chivalry-board";
 import { Button } from "./ui/button";
@@ -18,7 +18,7 @@ export function LocalGameClient() {
   // Turn state
   const [turnState, setTurnState] = useState<TurnState | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-  const [legalMoves, setLegalMoves] = useState<string[]>([]);
+  const [legalMoves, setLegalMoves] = useState<LegalMove[]>([]);
 
   // History
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
@@ -67,12 +67,13 @@ export function LocalGameClient() {
       }
 
       // Clicking a legal move - continue turn
-      if (legalMoves.includes(square)) {
+      if (legalMoves.some((move) => move.to === square)) {
         const result = Camelot.Logic.executeStep(
           square,
           boardState,
           turnState,
-          currentTurn
+          currentTurn,
+          legalMoves
         );
 
         if (result.success && result.newBoardState && result.newTurnState) {

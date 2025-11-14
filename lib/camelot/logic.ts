@@ -1,6 +1,6 @@
 import { Board } from "./board";
 import { Coordinates } from "./coordinates";
-import { BoardState, StepResult, TurnState } from "./types";
+import { BoardState, LegalMove, StepResult, TurnState } from "./types";
 
 export class Logic {
   static createEmptyTurnState(startSquare: string): TurnState {
@@ -8,6 +8,7 @@ export class Logic {
       moves: [startSquare],
       capturedSquares: [],
       mustContinue: false,
+      mustCharge: false,
     };
   }
 
@@ -110,7 +111,11 @@ export class Logic {
     to: string,
     boardState: BoardState,
     turnState: TurnState,
-    playerColor: string
+    playerColor: string,
+    // These are the other legal moves from the current position
+    // We use it to check if the user could have jumped but cantered instead
+    // If so, we must charge at some point in the turn
+    otherLegalMoves: LegalMove[]
   ): StepResult {
     const from = turnState.moves[turnState.moves.length - 1];
     const piece = boardState[from];
@@ -139,6 +144,11 @@ export class Logic {
     if (!plainCheck.valid && !canterCheck.valid && !jumpCheck.valid) {
       return { success: false, error: "Invalid move" };
     }
+
+    // If this is a canter and we could have jumped instead, we must charge at some point in the turn
+    const mustCharge =
+      turnState.mustCharge ||
+      (canterCheck.valid && otherLegalMoves.some((m) => m.type === "jump"));
 
     // If this is a plain move, it must be the first move
     const isFirstMove = turnState.moves.length === 1;
@@ -169,9 +179,10 @@ export class Logic {
     newBoardState[to] = piece;
     newBoardState[from] = null;
     const newTurnState: TurnState = {
-      ...turnState,
       moves: [...turnState.moves, to],
+      capturedSquares: [...turnState.capturedSquares],
       mustContinue: false,
+      mustCharge,
     };
 
     // Handle captures
@@ -207,7 +218,7 @@ export class Logic {
 
     // Determine legal next moves
     const hasJumpedThisMove = jumpCheck.valid;
-    let legalNextMoves: { type: "jump" | "canter"; square: string }[] = [];
+    let legalNextMoves: LegalMove[] = [];
     for (const direction of Coordinates.DIRECTIONS) {
       const oneStep = Coordinates.getAdjacentSquare(to, direction);
       if (!oneStep) continue;
@@ -226,7 +237,7 @@ export class Logic {
       const wouldBeCharge = totalCapturedSquares < turnState.moves.length;
       // We can only continue jumping in a charge if we are a knight
       if (nextJump.valid && (!wouldBeCharge || isKnight)) {
-        legalNextMoves.push({ type: "jump", square: twoStep });
+        legalNextMoves.push({ type: "jump", to: twoStep });
         continue;
       }
 
@@ -241,44 +252,188 @@ export class Logic {
         playerColor,
       });
       if (nextCanter.valid && !ownCastle.includes(twoStep)) {
-        legalNextMoves.push({ type: "canter", square: twoStep });
+        legalNextMoves.push({ type: "canter", to: twoStep });
       }
     }
 
-    // If jumps are available, filter out all other moves
-    // TODO: This doesn't take into account the fact that you can forgo jumping if you can knight's charge instead
-    if (legalNextMoves.some((move) => move.type === "jump")) {
+    const canJump = legalNextMoves.some((move) => move.type === "jump");
+    if (mustCharge || canJump) {
+      // Filter out all other normal moves
       legalNextMoves = legalNextMoves.filter((move) => move.type === "jump");
+
+      // If we are a knight and we have only cantered this turn, include all charges as legal moves
+      if (isKnight && turnState.capturedSquares.length === 0) {
+        legalNextMoves.push(
+          ...Logic.getPossibleCharges({
+            square: to,
+            boardState: newBoardState,
+            playerColor,
+          }).map((charge) => ({ type: "canter", to: charge } as LegalMove))
+        );
+      }
     }
 
     // Determine continuation status
     let message = "";
-    const canJump = legalNextMoves.some((move) => move.type === "jump");
+    const canCharge =
+      canJump && legalNextMoves.some((move) => move.type === "canter");
     if (to === startSquare) {
       // We landed on starting square - must move off
       newTurnState.mustContinue = true;
       message = "Cannot complete turn on starting square";
     } else if (canJump) {
-      // A jump is available - must jump
-      // TODO: This doesn't take into account the fact that you can forgo jumping if you can knight's charge instead
-      newTurnState.mustContinue = true;
-      message = "You are obligated to jump";
+      // If we are a knight and we have possible canters (charges) with possible jumps, we can either jump or charge
+      if (isKnight && canCharge) {
+        newTurnState.mustContinue = true;
+        message = "You are obligated to jump or charge";
+      } else {
+        // A jump is available - must jump
+        newTurnState.mustContinue = true;
+        message = "You are obligated to jump";
+      }
     }
 
     return {
       success: true,
       newBoardState,
       newTurnState,
-      legalNextMoves: legalNextMoves.map((move) => move.square),
+      legalNextMoves,
       message,
     };
+  }
+
+  // Deep search for sequences of one or many canters that end in a jump
+  // Return the first moves of each sequence
+  static getPossibleCharges({
+    square,
+    boardState,
+    playerColor,
+  }: {
+    square: string;
+    boardState: BoardState;
+    playerColor: string;
+  }): string[] {
+    // Create candidate set of one step canters
+    const cantersFromStart = Logic.getPossibleMovesOfTypeFromSquare({
+      square,
+      boardState,
+      moveType: "canter",
+      playerColor,
+    });
+
+    // Memoization cache for positions we have already analyzed
+    // Key: square string; Value: true=can reach jump downstream, false=cannot
+    const memo = new Map<string, boolean>();
+
+    // To avoid cycles, track visited squares in the current search path
+    function canJumpOrCharge(
+      square: string,
+      boardState: BoardState,
+      visited: Set<string>
+    ): boolean {
+      // Cycle guard: already visited this square in this search path?
+      if (visited.has(square)) return false;
+
+      // Memoization lookup
+      if (memo.has(square)) {
+        return memo.get(square)!;
+      }
+
+      // If any direct jumps are possible from here, return true
+      const jumps = Logic.getPossibleMovesOfTypeFromSquare({
+        square,
+        boardState,
+        moveType: "jump",
+        playerColor,
+      });
+      if (jumps.length > 0) {
+        memo.set(square, true);
+        return true;
+      }
+
+      // Otherwise, try all further canters from here
+      const canters = Logic.getPossibleMovesOfTypeFromSquare({
+        square,
+        boardState,
+        moveType: "canter",
+        playerColor,
+      });
+
+      // Mark as visited in the current path
+      visited.add(square);
+
+      for (const canter of canters) {
+        if (canJumpOrCharge(canter, boardState, visited)) {
+          memo.set(square, true);
+          visited.delete(square);
+          return true;
+        }
+      }
+
+      // Clean up visited set for this path
+      visited.delete(square);
+      memo.set(square, false);
+      return false;
+    }
+
+    // Return all candidates that lead to charges (canter moves that ultimately lead to a jump)
+    const charges: string[] = [];
+    for (const canter of cantersFromStart) {
+      if (canJumpOrCharge(canter, boardState, new Set([square]))) {
+        charges.push(canter);
+      }
+    }
+    return charges;
+  }
+
+  static getPossibleMovesOfTypeFromSquare({
+    square,
+    boardState,
+    moveType,
+    playerColor,
+  }: {
+    square: string;
+    boardState: BoardState;
+    moveType: "jump" | "canter";
+    playerColor: string;
+  }): string[] {
+    const moves: string[] = [];
+    for (const direction of Coordinates.DIRECTIONS) {
+      const oneStep = Coordinates.getAdjacentSquare(square, direction);
+      if (!oneStep) continue;
+      const twoStep = Coordinates.getAdjacentSquare(oneStep, direction);
+      if (!twoStep) continue;
+      switch (moveType) {
+        case "jump": {
+          const jumpCheck = Logic.isValidJump({
+            from: square,
+            to: twoStep,
+            boardState,
+            playerColor,
+          });
+          if (jumpCheck.valid) moves.push(twoStep);
+          break;
+        }
+        case "canter": {
+          const canterCheck = Logic.isValidCanter({
+            from: square,
+            to: twoStep,
+            boardState,
+            playerColor,
+          });
+          if (canterCheck.valid) moves.push(twoStep);
+          break;
+        }
+      }
+    }
+    return moves;
   }
 
   static getInitialMoves(
     square: string,
     boardState: BoardState,
     playerColor: string
-  ): string[] {
+  ): LegalMove[] {
     const piece = boardState[square];
     if (!piece || piece.color !== playerColor) return [];
 
@@ -289,20 +444,22 @@ export class Logic {
     );
     if (possibleJumps.length > 0) {
       // Return all jumps possible from this square
-      return possibleJumps.filter(
-        (jump) =>
-          Logic.isValidJump({
-            from: square,
-            to: jump,
-            boardState,
-            playerColor,
-          }).valid
-      );
+      return possibleJumps
+        .map((jump) => ({ type: "jump", to: jump } as LegalMove))
+        .filter(
+          (jump) =>
+            Logic.isValidJump({
+              from: square,
+              to: jump.to,
+              boardState,
+              playerColor,
+            }).valid
+        );
     }
 
     const ownCastle =
       playerColor === "white" ? Board.WHITE_CASTLE : Board.BLACK_CASTLE;
-    const moves: string[] = [];
+    const moves: LegalMove[] = [];
 
     // No jump required - show all legal moves
     for (const direction of Coordinates.DIRECTIONS) {
@@ -311,7 +468,7 @@ export class Logic {
 
       // Plain move
       if (!boardState[oneStep] && !ownCastle.includes(oneStep)) {
-        moves.push(oneStep);
+        moves.push({ type: "plain", to: oneStep } as LegalMove);
       }
 
       // Canter
@@ -325,16 +482,12 @@ export class Logic {
         playerColor,
       });
       if (canterCheck.valid && !ownCastle.includes(twoStep)) {
-        moves.push(twoStep);
+        moves.push({ type: "canter", to: twoStep } as LegalMove);
       }
     }
 
     return moves;
   }
-
-  // ============================================================================
-  // TURN NOTATION
-  // ============================================================================
 
   static getTurnNotation(turnState: TurnState): string {
     if (turnState.moves.length < 2) return "";
@@ -345,10 +498,6 @@ export class Logic {
       return turnState.moves.join("-");
     }
   }
-
-  // ============================================================================
-  // WIN CONDITIONS
-  // ============================================================================
 
   static checkWinCondition(
     boardState: BoardState,
