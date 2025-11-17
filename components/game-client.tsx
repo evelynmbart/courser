@@ -54,6 +54,7 @@ export function GameClient({
     handleSubmitTurn,
     handleResign,
     handleTimeout,
+    cancelTurn,
     goToFirstMove,
     goToPreviousMove,
     goToNextMove,
@@ -141,10 +142,18 @@ export function GameClient({
               <GamePlayerCard
                 player={game.black_player}
                 color="black"
-                isActive={game.current_turn === "black" && game.status === "active"}
+                isActive={
+                  game.current_turn === "black" && game.status === "active"
+                }
                 timeRemaining={game.black_time_remaining}
                 lastMoveTime={game.last_move_time}
-                onTimeout={!isWhitePlayer && game.current_turn === "black" && game.status === "active" ? handleTimeout : undefined}
+                onTimeout={
+                  !isWhitePlayer &&
+                  game.current_turn === "black" &&
+                  game.status === "active"
+                    ? handleTimeout
+                    : undefined
+                }
                 mobile
               />
             </div>
@@ -179,10 +188,18 @@ export function GameClient({
               <GamePlayerCard
                 player={game.white_player}
                 color="white"
-                isActive={game.current_turn === "white" && game.status === "active"}
+                isActive={
+                  game.current_turn === "white" && game.status === "active"
+                }
                 timeRemaining={game.white_time_remaining}
                 lastMoveTime={game.last_move_time}
-                onTimeout={isWhitePlayer && game.current_turn === "white" && game.status === "active" ? handleTimeout : undefined}
+                onTimeout={
+                  isWhitePlayer &&
+                  game.current_turn === "white" &&
+                  game.status === "active"
+                    ? handleTimeout
+                    : undefined
+                }
                 mobile
               />
             </div>
@@ -194,6 +211,7 @@ export function GameClient({
                 message={message}
                 isSubmitting={isSubmitting}
                 onSubmit={handleSubmitTurn}
+                onCancel={cancelTurn}
                 mobile
               />
             )}
@@ -217,10 +235,18 @@ export function GameClient({
             <GamePlayerCard
               player={game.black_player}
               color="black"
-              isActive={game.current_turn === "black" && game.status === "active"}
+              isActive={
+                game.current_turn === "black" && game.status === "active"
+              }
               timeRemaining={game.black_time_remaining}
               lastMoveTime={game.last_move_time}
-              onTimeout={!isWhitePlayer && game.current_turn === "black" && game.status === "active" ? handleTimeout : undefined}
+              onTimeout={
+                !isWhitePlayer &&
+                game.current_turn === "black" &&
+                game.status === "active"
+                  ? handleTimeout
+                  : undefined
+              }
             />
 
             <GameMoveHistory
@@ -232,10 +258,18 @@ export function GameClient({
             <GamePlayerCard
               player={game.white_player}
               color="white"
-              isActive={game.current_turn === "white" && game.status === "active"}
+              isActive={
+                game.current_turn === "white" && game.status === "active"
+              }
               timeRemaining={game.white_time_remaining}
               lastMoveTime={game.last_move_time}
-              onTimeout={isWhitePlayer && game.current_turn === "white" && game.status === "active" ? handleTimeout : undefined}
+              onTimeout={
+                isWhitePlayer &&
+                game.current_turn === "white" &&
+                game.status === "active"
+                  ? handleTimeout
+                  : undefined
+              }
             />
 
             {isPlayerTurn && !isGameCompleted && (
@@ -244,6 +278,7 @@ export function GameClient({
                 message={message}
                 isSubmitting={isSubmitting}
                 onSubmit={handleSubmitTurn}
+                onCancel={cancelTurn}
               />
             )}
           </div>

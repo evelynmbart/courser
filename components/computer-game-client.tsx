@@ -1,12 +1,8 @@
 "use client";
 
+import { useLocalGameLogic } from "@/hooks/use-local-game-logic";
 import { Camelot, CamelotEngine } from "@/lib/camelot";
-import {
-  BoardState,
-  GameState,
-  LegalMove,
-  TurnState,
-} from "@/lib/camelot/types";
+import { GameState } from "@/lib/camelot/types";
 import { useEffect, useState } from "react";
 import { ChivalryBoard } from "./chivalry-board";
 import { Button } from "./ui/button";
@@ -31,25 +27,36 @@ export function ComputerGameClient() {
   // Engine
   const [engine, setEngine] = useState<CamelotEngine | null>(null);
 
-  // Game state
-  const [boardState, setBoardState] = useState<BoardState>(
-    Camelot.Board.getInitialBoardState()
-  );
-  const [currentTurn, setCurrentTurn] = useState<"white" | "black">("white");
-  const [winner, setWinner] = useState<string | null>(null);
-
-  // Turn state
-  const [turnState, setTurnState] = useState<TurnState | null>(null);
-  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-  const [legalMoves, setLegalMoves] = useState<LegalMove[]>([]);
-
-  // History
-  const [moveHistory, setMoveHistory] = useState<string[]>([]);
-
-  // UI messages
-  const [message, setMessage] = useState<string>("");
+  // UI messages for engine
   const [isEngineThinking, setIsEngineThinking] = useState(false);
   const [engineStats, setEngineStats] = useState<string>("");
+
+  // Use shared game logic
+  const {
+    boardState,
+    setBoardState,
+    currentTurn,
+    setCurrentTurn,
+    winner,
+    setWinner,
+    turnState,
+    selectedSquare,
+    legalMoves,
+    moveHistory,
+    setMoveHistory,
+    message,
+    setMessage,
+    handleSquareClick: baseHandleSquareClick,
+    handleSubmitTurn: baseHandleSubmitTurn,
+    handleReset: baseHandleReset,
+    cancelTurn,
+  } = useLocalGameLogic({
+    onTurnSubmitted: async ({ currentTurn }) => {
+      // After human submits, switch to computer
+      const computerColor = humanColor === "white" ? "black" : "white";
+      setCurrentTurn(computerColor);
+    },
+  });
 
   // Initialize engine when game starts
   useEffect(() => {
@@ -144,161 +151,27 @@ export function ComputerGameClient() {
     moveHistory,
   ]);
 
-  // Check for mandatory jumps at turn start (human only)
-  useEffect(() => {
-    if (!gameStarted || winner || turnState || currentTurn !== humanColor)
-      return;
-
-    const hasJump =
-      Camelot.Logic.checkFirstMovePossibleJumps(boardState, currentTurn)
-        .length > 0;
-    if (hasJump) {
-      setMessage("You must capture! Select a piece to see available captures.");
-    } else {
-      setMessage("");
-    }
-  }, [gameStarted, currentTurn, boardState, winner, turnState, humanColor]);
-
+  // Wrapper for square click that checks if it's human's turn
   const handleSquareClick = (square: string) => {
-    if (winner || !gameStarted || currentTurn !== humanColor) return;
-
-    // If turn in progress
-    if (turnState) {
-      const currentSquare = turnState.moves[turnState.moves.length - 1];
-
-      // Clicking current position - deselect
-      if (square === currentSquare) {
-        // Can't deselect if moves have been made
-        if (turnState.moves.length > 1) {
-          return;
-        }
-        setTurnState(null);
-        setSelectedSquare(null);
-        setLegalMoves([]);
-        return;
-      }
-
-      // Clicking a legal move - continue turn
-      if (legalMoves.some((move) => move.to === square)) {
-        const result = Camelot.Logic.executeStep(
-          square,
-          boardState,
-          turnState,
-          currentTurn,
-          legalMoves
-        );
-
-        if (result.success && result.newBoardState && result.newTurnState) {
-          setMessage(result.message);
-          setBoardState(result.newBoardState);
-          setTurnState(result.newTurnState);
-          setSelectedSquare(
-            result.newTurnState.moves[result.newTurnState.moves.length - 1]
-          );
-          setLegalMoves(result.legalNextMoves);
-          if (result.legalNextMoves.length === 0) {
-            setMessage(
-              "No more legal moves. Click Submit Turn to end your turn."
-            );
-          }
-        }
-        if (!result.success) {
-          console.error("Error executing step", result.error);
-        }
-        return;
-      }
-
-      // Clicking elsewhere during mandatory continuation - not allowed
-      if (turnState.mustContinue) {
-        return;
-      }
-
-      // Clicking elsewhere if no legal moves - not allowed
-      if (legalMoves.length === 0) {
-        return;
-      }
-
-      // Clicking elsewhere during optional continuation - allow it (implicitly ends turn)
-      // Fall through to piece selection
-    }
-
-    // Starting a new turn or selecting a piece
-    const piece = boardState[square];
-    if (piece && piece.color === currentTurn) {
-      const moves = Camelot.Logic.getInitialMoves(
-        square,
-        boardState,
-        currentTurn
-      );
-
-      if (moves.length === 0) {
-        setMessage("This piece has no legal moves.");
-        return;
-      }
-
-      setSelectedSquare(square);
-      setLegalMoves(moves);
-
-      // Start a new turn state
-      setTurnState(Camelot.Logic.createEmptyTurnState(square));
-      setMessage("Select where to move.");
-    }
+    if (!gameStarted || currentTurn !== humanColor) return;
+    baseHandleSquareClick(square);
   };
 
+  // Wrapper for submit turn
   const handleSubmitTurn = () => {
-    if (!turnState || turnState.mustContinue) return;
-
-    // Record the move
-    const notation = Camelot.Logic.getTurnNotation(turnState);
-    if (notation) {
-      setMoveHistory([...moveHistory, notation]);
-    }
-
-    // Check for win
-    const winCondition = Camelot.Logic.checkWinCondition(
-      boardState,
-      currentTurn
-    );
-    if (winCondition) {
-      setWinner(currentTurn);
-      setMessage(`You win by ${winCondition}!`);
-    } else {
-      // Switch turns to computer
-      const computerColor = humanColor === "white" ? "black" : "white";
-      setCurrentTurn(computerColor);
-    }
-
-    // Reset turn state
-    setTurnState(null);
-    setSelectedSquare(null);
-    setLegalMoves([]);
-    setMessage("");
+    baseHandleSubmitTurn();
   };
 
   const handleStartGame = () => {
     setGameStarted(true);
-    setBoardState(Camelot.Board.getInitialBoardState());
-    setCurrentTurn("white");
-    setTurnState(null);
-    setSelectedSquare(null);
-    setLegalMoves([]);
-    setMoveHistory([]);
-    setWinner(null);
-    setMessage("");
+    baseHandleReset();
     setEngineStats("");
   };
 
   const handleNewGame = () => {
     setGameStarted(false);
     setEngine(null);
-    setBoardState(Camelot.Board.getInitialBoardState());
-    setCurrentTurn("white");
-    setTurnState(null);
-    setSelectedSquare(null);
-    setLegalMoves([]);
-    setMoveHistory([]);
-    setWinner(null);
-    setMessage("");
+    baseHandleReset();
     setEngineStats("");
     setIsEngineThinking(false);
   };
@@ -469,13 +342,25 @@ export function ComputerGameClient() {
 
           <div className="flex gap-2 mt-4">
             {currentTurn === humanColor && (
-              <Button
-                onClick={handleSubmitTurn}
-                className="flex-1"
-                disabled={!turnState || turnState.mustContinue || !!winner}
-              >
-                Submit Turn
-              </Button>
+              <>
+                {turnState && (
+                  <Button
+                    onClick={cancelTurn}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  >
+                    Cancel Turn
+                  </Button>
+                )}
+                <Button
+                  onClick={handleSubmitTurn}
+                  className="flex-1"
+                  disabled={!turnState || turnState.mustContinue || !!winner}
+                >
+                  Submit Turn
+                </Button>
+              </>
             )}
             <Button
               onClick={handleNewGame}

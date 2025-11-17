@@ -7,6 +7,7 @@ interface GameTurnControlsProps {
   message: string;
   isSubmitting: boolean;
   onSubmit: () => void;
+  onCancel?: () => void;
   mobile?: boolean;
 }
 
@@ -15,6 +16,7 @@ export function GameTurnControls({
   message,
   isSubmitting,
   onSubmit,
+  onCancel,
   mobile = false,
 }: GameTurnControlsProps) {
   const content = (
@@ -41,14 +43,26 @@ export function GameTurnControls({
       )}
 
       {turnState && (
-        <Button
-          onClick={onSubmit}
-          className="w-full"
-          size="lg"
-          disabled={!turnState || turnState.mustContinue || isSubmitting}
-        >
-          {isSubmitting ? "Submitting..." : "Submit Turn"}
-        </Button>
+        <div className="flex gap-2">
+          {onCancel && (
+            <Button
+              onClick={onCancel}
+              variant="outline"
+              size={mobile ? "default" : "lg"}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+          )}
+          <Button
+            onClick={onSubmit}
+            className="flex-1"
+            size={mobile ? "default" : "lg"}
+            disabled={!turnState || turnState.mustContinue || isSubmitting}
+          >
+            {isSubmitting ? "Submitting..." : "Submit Turn"}
+          </Button>
+        </div>
       )}
     </>
   );

@@ -1,6 +1,6 @@
 import { Camelot } from "@/lib/camelot";
 import { updateEloRatings } from "@/lib/elo-system";
-import type { LegalMove, TurnState } from "@/lib/camelot/types";
+import type { BoardState, LegalMove, TurnState } from "@/lib/camelot/types";
 import type { GameData } from "@/types/game";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useState } from "react";
@@ -45,6 +45,7 @@ export function useGameActions({
   supabase,
 }: UseGameActionsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [turnStartBoardState, setTurnStartBoardState] = useState<BoardState | null>(null);
 
   const handleSquareClick = async (square: string) => {
     if (!isPlayerTurn || game.status !== "active" || !isViewingLatest) return;
@@ -129,6 +130,9 @@ export function useGameActions({
 
       setSelectedSquare(square);
       setLegalMoves(moves);
+
+      // Store the current board state before starting the turn
+      setTurnStartBoardState(game.board_state);
 
       // Start a new turn state
       setTurnState(Camelot.Logic.createEmptyTurnState(square));
@@ -293,6 +297,7 @@ export function useGameActions({
       setTurnState(null);
       setSelectedSquare(null);
       setLegalMoves([]);
+      setTurnStartBoardState(null);
       setMessage("");
     } catch (error) {
       console.error("[Game] Submit turn error:", error);
@@ -331,6 +336,7 @@ export function useGameActions({
     setSelectedSquare(null);
     setLegalMoves([]);
     setTurnState(null);
+    setTurnStartBoardState(null);
   };
 
   const goToPreviousMove = () => {
@@ -339,6 +345,7 @@ export function useGameActions({
       setSelectedSquare(null);
       setLegalMoves([]);
       setTurnState(null);
+      setTurnStartBoardState(null);
     }
   };
 
@@ -348,6 +355,7 @@ export function useGameActions({
       setSelectedSquare(null);
       setLegalMoves([]);
       setTurnState(null);
+      setTurnStartBoardState(null);
     }
   };
 
@@ -356,6 +364,7 @@ export function useGameActions({
     setSelectedSquare(null);
     setLegalMoves([]);
     setTurnState(null);
+    setTurnStartBoardState(null);
   };
 
   const goToMove = (index: number) => {
@@ -363,6 +372,23 @@ export function useGameActions({
     setSelectedSquare(null);
     setLegalMoves([]);
     setTurnState(null);
+    setTurnStartBoardState(null);
+  };
+
+  const cancelTurn = () => {
+    // Restore the board state to before the turn started
+    if (turnStartBoardState) {
+      setGame({
+        ...game,
+        board_state: turnStartBoardState,
+      });
+    }
+    
+    setTurnState(null);
+    setSelectedSquare(null);
+    setLegalMoves([]);
+    setTurnStartBoardState(null);
+    setMessage("");
   };
 
   return {
@@ -371,6 +397,7 @@ export function useGameActions({
     handleSubmitTurn,
     handleResign,
     handleTimeout,
+    cancelTurn,
     goToFirstMove,
     goToPreviousMove,
     goToNextMove,
