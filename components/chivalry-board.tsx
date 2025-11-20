@@ -3,6 +3,7 @@
 import { Camelot } from "@/lib/camelot";
 import { LegalMove } from "@/lib/camelot/types";
 import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
 
 interface ChivalryBoardProps {
   boardState: Record<string, { type: string; color: string } | null>;
@@ -23,6 +24,8 @@ export function ChivalryBoard({
   disabled = false,
   lastMove,
 }: ChivalryBoardProps) {
+  const { theme, setTheme } = useTheme();
+
   // Parse last move to show arrows (opponent's last move)
   const lastMoveArrows = (() => {
     if (!lastMove) return [];
@@ -112,11 +115,19 @@ export function ChivalryBoard({
     );
   };
 
-  const getPieceSymbol = (piece: { type: string; color: string }) => {
+  const getPieceSymbol = (
+    piece: { type: string; color: string },
+    theme: string
+  ) => {
+    // Invert piece colors if dark theme
+    let displayColor = piece.color;
+    if (theme === "dark") {
+      displayColor = piece.color === "white" ? "black" : "white";
+    }
     if (piece.type === "knight") {
-      return piece.color === "white" ? "♘" : "♞";
+      return displayColor === "white" ? "♘" : "♞";
     } else {
-      return piece.color === "white" ? "♙" : "♟";
+      return displayColor === "white" ? "♙" : "♟";
     }
   };
 
@@ -194,14 +205,8 @@ export function ChivalryBoard({
                   )}
                 >
                   {piece && (
-                    <span
-                      className={
-                        piece.color === "white"
-                          ? "text-foreground"
-                          : "text-foreground"
-                      }
-                    >
-                      {getPieceSymbol(piece)}
+                    <span className={"text-foreground"}>
+                      {getPieceSymbol(piece, theme ?? "light")}
                     </span>
                   )}
                   {isLegalMove && !piece && (
