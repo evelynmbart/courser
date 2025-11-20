@@ -236,30 +236,30 @@ export function ChivalryBoard({
               <defs>
                 <marker
                   id="arrowhead-jump-sm"
-                  markerWidth="8"
-                  markerHeight="8"
-                  refX="7"
+                  markerWidth="5"
+                  markerHeight="5"
+                  refX="4.33"
                   refY="2.5"
                   orient="auto"
                   markerUnits="strokeWidth"
                 >
                   <polygon
-                    points="0 0, 8 2.5, 0 5"
+                    points="0 0, 4.33 2.5, 0 5"
                     fill="rgb(248, 113, 113)"
                     opacity="0.7"
                   />
                 </marker>
                 <marker
                   id="arrowhead-canter-sm"
-                  markerWidth="8"
-                  markerHeight="8"
-                  refX="7"
+                  markerWidth="5"
+                  markerHeight="5"
+                  refX="4.33"
                   refY="2.5"
                   orient="auto"
                   markerUnits="strokeWidth"
                 >
                   <polygon
-                    points="0 0, 8 2.5, 0 5"
+                    points="0 0, 4.33 2.5, 0 5"
                     fill="rgb(96, 165, 250)"
                     opacity="0.7"
                   />
@@ -315,13 +315,13 @@ export function ChivalryBoard({
                   id="arrowhead-jump-lg"
                   markerWidth="6"
                   markerHeight="6"
-                  refX="5.4"
-                  refY="1.8"
+                  refX="5.196"
+                  refY="3"
                   orient="auto"
                   markerUnits="strokeWidth"
                 >
                   <polygon
-                    points="0 0, 6 1.8, 0 3.6"
+                    points="0 0, 5.196 3, 0 6"
                     fill="rgb(248, 113, 113)"
                     opacity="0.7"
                   />
@@ -330,13 +330,13 @@ export function ChivalryBoard({
                   id="arrowhead-canter-lg"
                   markerWidth="6"
                   markerHeight="6"
-                  refX="5.4"
-                  refY="1.8"
+                  refX="5.196"
+                  refY="3"
                   orient="auto"
                   markerUnits="strokeWidth"
                 >
                   <polygon
-                    points="0 0, 6 1.8, 0 3.6"
+                    points="0 0, 5.196 3, 0 6"
                     fill="rgb(96, 165, 250)"
                     opacity="0.7"
                   />
