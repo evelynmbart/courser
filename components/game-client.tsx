@@ -171,6 +171,7 @@ export function GameClient({
                   game.status !== "active" ||
                   !isViewingLatest
                 }
+                lastMove={game.move_history[game.move_history.length - 1]}
               />
 
               <GameBoardControls

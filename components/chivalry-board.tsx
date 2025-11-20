@@ -11,6 +11,7 @@ interface ChivalryBoardProps {
   onSquareClick: (square: string) => void;
   playerColor: string;
   disabled?: boolean;
+  lastMove?: string;
 }
 
 export function ChivalryBoard({
@@ -20,7 +21,22 @@ export function ChivalryBoard({
   onSquareClick,
   playerColor,
   disabled = false,
+  lastMove,
 }: ChivalryBoardProps) {
+  // Parse last move to show arrows (opponent's last move)
+  const lastMoveArrows = (() => {
+    // Split by both 'x' (captures) and '-' (regular moves)
+    const squares = lastMove?.split(/[x-]/) ?? [];
+
+    // Create arrow segments for each step in the move
+    const arrows: Array<{ from: string; to: string }> = [];
+    for (let i = 0; i < squares.length - 1; i++) {
+      arrows.push({ from: squares[i], to: squares[i + 1] });
+    }
+
+    return arrows;
+  })();
+
   // Generate the Camelot board layout from Board.ALL_SQUARES
   const rows = (() => {
     const rankMap = new Map<number, string[]>();
@@ -101,6 +117,17 @@ export function ChivalryBoard({
   const displayRanks =
     playerColor === "black" ? [...allRanks].reverse() : allRanks;
 
+  // Helper to get square position in the grid
+  const getSquarePosition = (square: string) => {
+    const file = square.match(/[A-L]/)?.[0] || "";
+    const rank = parseInt(square.match(/\d+/)?.[0] || "0");
+
+    const rankIndex = displayRanks.indexOf(rank);
+    const fileIndex = displayFiles.indexOf(file);
+
+    return { row: rankIndex, col: fileIndex };
+  };
+
   return (
     <div className="flex items-start">
       {/* Left rank labels - straight vertical line */}
@@ -118,7 +145,7 @@ export function ChivalryBoard({
       </div>
 
       {/* Board area */}
-      <div className="inline-block">
+      <div className="inline-block relative">
         {/* Board rows */}
         {displayRows.map((row) => (
           <div key={row.rank} className="flex justify-center">
@@ -182,6 +209,121 @@ export function ChivalryBoard({
             </div>
           ))}
         </div>
+
+        {/* SVG overlay for move arrows - use two versions for responsive sizing */}
+        {lastMoveArrows.length > 0 && (
+          <>
+            {/* Small screens (w-10 h-10) */}
+            <svg
+              className="absolute inset-0 pointer-events-none sm:hidden"
+              style={{ width: "100%", height: "100%" }}
+            >
+              <defs>
+                <marker
+                  id="arrowhead-sm"
+                  markerWidth="8"
+                  markerHeight="8"
+                  refX="7"
+                  refY="2.5"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <polygon
+                    points="0 0, 8 2.5, 0 5"
+                    fill="rgb(34, 197, 94)"
+                    opacity="0.8"
+                  />
+                </marker>
+              </defs>
+              {lastMoveArrows.map((arrow, index) => {
+                const fromPos = getSquarePosition(arrow.from);
+                const toPos = getSquarePosition(arrow.to);
+
+                const squareSize = 40; // w-10 = 2.5rem = 40px
+                const fromX = fromPos.col * squareSize + squareSize / 2;
+                const fromY = fromPos.row * squareSize + squareSize / 2;
+                const toX = toPos.col * squareSize + squareSize / 2;
+                const toY = toPos.row * squareSize + squareSize / 2;
+
+                const angle = Math.atan2(toY - fromY, toX - fromX);
+                const shortenBy = squareSize * 0.3;
+                const adjustedFromX = fromX + Math.cos(angle) * shortenBy;
+                const adjustedFromY = fromY + Math.sin(angle) * shortenBy;
+                const adjustedToX = toX - Math.cos(angle) * shortenBy;
+                const adjustedToY = toY - Math.sin(angle) * shortenBy;
+
+                return (
+                  <line
+                    key={`${arrow.from}-${arrow.to}-${index}-sm`}
+                    x1={adjustedFromX}
+                    y1={adjustedFromY}
+                    x2={adjustedToX}
+                    y2={adjustedToY}
+                    stroke="rgb(34, 197, 94)"
+                    strokeWidth="3"
+                    strokeOpacity="0.8"
+                    markerEnd="url(#arrowhead-sm)"
+                  />
+                );
+              })}
+            </svg>
+
+            {/* Large screens (w-12 h-12) */}
+            <svg
+              className="absolute inset-0 pointer-events-none hidden sm:block"
+              style={{ width: "100%", height: "100%" }}
+            >
+              <defs>
+                <marker
+                  id="arrowhead-lg"
+                  markerWidth="6"
+                  markerHeight="6"
+                  refX="5.4"
+                  refY="1.8"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <polygon
+                    points="0 0, 6 1.8, 0 3.6"
+                    fill="rgb(251, 146, 60)"
+                    opacity="0.6"
+                  />
+                </marker>
+              </defs>
+              {lastMoveArrows.map((arrow, index) => {
+                const fromPos = getSquarePosition(arrow.from);
+                const toPos = getSquarePosition(arrow.to);
+
+                const squareSize = 48; // w-12 = 3rem = 48px
+                const fromX = fromPos.col * squareSize + squareSize / 2;
+                const fromY = fromPos.row * squareSize + squareSize / 2;
+                const toX = toPos.col * squareSize + squareSize / 2;
+                const toY = toPos.row * squareSize + squareSize / 2;
+
+                const angle = Math.atan2(toY - fromY, toX - fromX);
+                const shortenBy = squareSize * 0.3;
+                const adjustedFromX = fromX + Math.cos(angle) * shortenBy;
+                const adjustedFromY = fromY + Math.sin(angle) * shortenBy;
+                const adjustedToX = toX - Math.cos(angle) * shortenBy;
+                const adjustedToY = toY - Math.sin(angle) * shortenBy;
+
+                return (
+                  <line
+                    key={`${arrow.from}-${arrow.to}-${index}-lg`}
+                    x1={adjustedFromX}
+                    y1={adjustedFromY}
+                    x2={adjustedToX}
+                    y2={adjustedToY}
+                    stroke="rgb(251, 146, 60)"
+                    strokeWidth="4"
+                    strokeOpacity="0.3"
+                    markerEnd="url(#arrowhead-lg)"
+                  />
+                );
+              })}
+            </svg>
+          </>
+        )}
       </div>
     </div>
   );

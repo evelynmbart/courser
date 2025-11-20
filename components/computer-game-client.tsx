@@ -268,6 +268,7 @@ export function ComputerGameClient() {
           onSquareClick={handleSquareClick}
           playerColor={humanColor}
           disabled={!!winner || currentTurn !== humanColor || isEngineThinking}
+          lastMove={moveHistory[moveHistory.length - 1]}
         />
       </div>
 

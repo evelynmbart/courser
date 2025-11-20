@@ -31,6 +31,7 @@ export function LocalGameClient() {
           onSquareClick={handleSquareClick}
           playerColor="white"
           disabled={!!winner}
+          lastMove={moveHistory[moveHistory.length - 1]}
         />
       </div>
 
