@@ -8,6 +8,7 @@ export type GameState = {
 
 export type TurnState = {
   moves: string[]; // Squares visited this turn [start, intermediate..., current]
+  moveTypes: ("plain" | "canter" | "jump")[]; // Type of each move (length = moves.length - 1)
   capturedSquares: string[]; // Squares where pieces were captured
   mustContinue: boolean;
   mustCharge: boolean;

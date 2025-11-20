@@ -6,6 +6,7 @@ export class Logic {
   static createEmptyTurnState(startSquare: string): TurnState {
     return {
       moves: [startSquare],
+      moveTypes: [],
       capturedSquares: [],
       mustContinue: false,
       mustCharge: false,
@@ -178,8 +179,20 @@ export class Logic {
     const newBoardState = { ...boardState };
     newBoardState[to] = piece;
     newBoardState[from] = null;
+
+    // Determine the move type for this step
+    let moveType: "plain" | "canter" | "jump";
+    if (jumpCheck.valid) {
+      moveType = "jump";
+    } else if (canterCheck.valid) {
+      moveType = "canter";
+    } else {
+      moveType = "plain";
+    }
+
     const newTurnState: TurnState = {
       moves: [...turnState.moves, to],
+      moveTypes: [...turnState.moveTypes, moveType],
       capturedSquares: [...turnState.capturedSquares],
       mustContinue: false,
       mustCharge,
@@ -490,11 +503,14 @@ export class Logic {
   static getTurnNotation(turnState: TurnState): string {
     if (turnState.moves.length < 2) return "";
 
-    if (turnState.capturedSquares.length > 0) {
-      return turnState.moves.join("x");
-    } else {
-      return turnState.moves.join("-");
+    // Build notation with appropriate delimiters based on move types
+    let notation = turnState.moves[0];
+    for (let i = 0; i < turnState.moveTypes.length; i++) {
+      const delimiter = turnState.moveTypes[i] === "jump" ? "x" : "-";
+      notation += delimiter + turnState.moves[i + 1];
     }
+
+    return notation;
   }
 
   static checkWinCondition(
